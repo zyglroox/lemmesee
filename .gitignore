@@ -1,0 +1,13 @@
+# Extensions
+*.suo
+*.user
+*.dbmdl
+*.nupkg
+*.bin
+
+#Folders
+**/.vs/
+**/obj/
+**/bin/
+**/.vscode/
+**/.idea/
