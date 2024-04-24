@@ -1,6 +1,7 @@
-﻿using OpenAI_API;
+﻿using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using OpenAI_API;
 using OpenAI_API.Chat;
-using OpenAI_API.Models;
 
 namespace LemmeSee.ChatGPT
 {
@@ -18,6 +19,25 @@ namespace LemmeSee.ChatGPT
 			chat.AppendSystemMessage("Send the code back in the form it can go directly into IDE, as a plain text not in the 'code' text-box element");
 			chat.AppendSystemMessage("Don't use any words/sentences/phrases that are not necessary, you don't have to greet or be welcoming, just strict response");
 			return chat;
+		}
+	}
+
+	internal static class PromptHelper
+	{
+		public static async Task<string> Process(this Conversation chat,
+			string prompt,
+			string code,
+			SemanticModel semanticModel)
+		{
+			chat.AppendUserInput($"Hi! {prompt}");
+			chat.AppendUserInput($"The code is in {semanticModel.Language} language");
+			chat.AppendUserInput($"Here's the code: {code}");
+			chat.AppendUserInput($"Here's the context: {semanticModel.SyntaxTree}");
+			if (prompt.Contains("explain"))
+				chat.AppendUserInput($"Please, return revised version of this code, if you have any thoughts on it, include them as comments in the code");
+			var result = await chat.GetResponseFromChatbotAsync();
+			return result.Replace("```csharp", string.Empty)
+				.Replace("```", string.Empty);
 		}
 	}
 }
