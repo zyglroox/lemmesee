@@ -45,13 +45,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AICodeRefactoringProvider.cs" />
+    <Compile Include="RefactoringFlow\AICodeRefactoringProvider.cs" />
     <Compile Include="ChatGPT\PromptProcessor.cs" />
-    <Compile Include="KeyProcessor.cs" />
+    <Compile Include="RefactoringFlow\SyntaxTreeHelper.cs" />
+    <Compile Include="UserInput\KeyProcessor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="AiTextBox.cs" />
-    <Compile Include="AiTextBoxViewCreationListener.cs" />
-    <Compile Include="UiGlobal.cs" />
+    <Compile Include="UserInput\AiTextBox.cs" />
+    <Compile Include="UserInput\AiTextBoxViewCreationListener.cs" />
+    <Compile Include="UserInput\UiColors.cs" />
+    <Compile Include="UserInput\UiGlobal.cs" />
     <Compile Include="LemmeSeePackage.cs" />
   </ItemGroup>
   <ItemGroup>

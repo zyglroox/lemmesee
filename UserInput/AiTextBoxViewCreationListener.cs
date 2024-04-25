@@ -1,8 +1,8 @@
-﻿using Microsoft.VisualStudio.Text.Editor;
+﻿using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
-using System.ComponentModel.Composition;
 
-namespace LemmeSee
+namespace LemmeSee.UserInput
 {
 	/// <summary>
 	/// Establishes an <see cref="IAdornmentLayer"/> to place the adornment on and exports the <see cref="IWpfTextViewCreationListener"/>

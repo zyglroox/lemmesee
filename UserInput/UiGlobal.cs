@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
-namespace LemmeSee
+namespace LemmeSee.UserInput
 {
 	internal class UiGlobal
 	{
@@ -27,7 +27,7 @@ namespace LemmeSee
 
 		public static Task HideTextBox()
 		{
-			return _dispatcher.Invoke(() => _textBox.HideInputControl());
+			return _dispatcher.Invoke(() => _textBox.Hide());
 		}
 
 		public static Task<string> GetPrompt()

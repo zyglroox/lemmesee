@@ -1,16 +1,15 @@
-﻿using Microsoft.CodeAnalysis.CodeRefactorings;
-using Microsoft.CodeAnalysis;
-using System.Composition;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CodeActions;
+﻿using System.Composition;
 using System.Threading;
+using System.Threading.Tasks;
 using LemmeSee.ChatGPT;
+using LemmeSee.UserInput;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CodeActions;
+using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.Text;
 using Document = Microsoft.CodeAnalysis.Document;
-using Microsoft.CodeAnalysis.CSharp;
 
-namespace LemmeSee
+namespace LemmeSee.RefactoringFlow
 {
 	[ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = "AICodeRefactoring"), Shared]
 	internal class AICodeRefactoringProvider : CodeRefactoringProvider
@@ -18,6 +17,10 @@ namespace LemmeSee
 		private static string _response;
 		private static string _actionName;
 		private static TextSpan _prevSpan;
+
+		private static string GetActionName() => string.IsNullOrEmpty(_response)
+			? "\u2728 Ask an AI"
+			: "\u2728 Get an AI suggestion";
 
 		public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
 		{
@@ -32,23 +35,20 @@ namespace LemmeSee
 			if (!string.IsNullOrEmpty(_response) && !_prevSpan.Equals(context.Span))
 			{
 				_response = null;
+				_actionName = GetActionName();
 			}
 			else
 			{
 				_prevSpan = context.Span;
+				_actionName = GetActionName();
 			}
 
-			var action =
-				CodeAction.Create(GetActionName(),
+			var action = CodeAction.Create(_actionName,
 					c => ProcessCode(context.
 						Document, node, c));
 
 			context.RegisterRefactoring(action);
 		}
-
-		private string GetActionName() => string.IsNullOrEmpty(_response)
-			? "\u2728 Ask an AI"
-			: "\u2728 Get an AI suggestion";
 
 		private static async Task<Document> ProcessCode(
 			Document document,
@@ -77,7 +77,7 @@ namespace LemmeSee
 
 			//var newNode = await SyntaxFactory.ParseSyntaxTree(response).GetRootAsync(cancellationToken);
 
-			var parsedResponse = TryParseSyntax(_response);
+			var parsedResponse = SyntaxTreeHelper.TryParseSyntax(_response);
 			if (parsedResponse == null)
 			{
 				return document;
@@ -86,59 +86,18 @@ namespace LemmeSee
 			// Get the root syntax node
 			var root = await document.GetSyntaxRootAsync(cancellationToken);
 
-			var nodeToReplace = GetNodeToReplace(root, node, parsedResponse);
+			var nodeToReplace = SyntaxTreeHelper.GetNodeToReplace(root, node, parsedResponse);
 
 			//var newRoot = root.ReplaceNode(nodeToReplace, parsedResponse);
 
 			var oldDocAsText = await document.GetTextAsync(cancellationToken);
 
 			// Generate a new document
-			var newDocument =
-				document.WithText(oldDocAsText.Replace(nodeToReplace.Span, parsedResponse.ToString()));
+			var newDocument = document
+					.WithText(oldDocAsText.Replace(nodeToReplace.Span, parsedResponse.ToString()));
 
 			// Return the document
 			return newDocument;
-		}
-
-		public static SyntaxNode TryParseSyntax(string code)
-		{
-			// Try to parse the code string into a syntax tree
-			var syntaxTree = CSharpSyntaxTree.ParseText(code);
-			var root = syntaxTree.GetRoot();
-
-			// Check if there are any syntax errors in the tree
-			if (syntaxTree.GetDiagnostics().Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
-			{
-				// Parsing failed due to syntax errors
-				return null;
-			}
-
-			// Return the root node of the syntax tree
-			return root;
-		}
-
-		public static SyntaxNode GetNodeToReplace(SyntaxNode root, SyntaxNode originalNode, SyntaxNode newNode)
-		{
-			var nodeToReplace = originalNode;
-			var newNodeType = newNode.GetType().Name;
-			if (newNodeType == "CompilationUnitSyntax" && newNode.ChildNodes().Any())
-				newNodeType = newNode.ChildNodes().First().GetType().Name;
-
-			while (true)
-			{
-				if (nodeToReplace.GetType().Name == newNodeType)
-				{
-					return nodeToReplace;
-				}
-
-				if (nodeToReplace.Parent == null)
-				{
-					if (root.GetType().Name == newNodeType)
-						return root;
-				}
-
-				nodeToReplace = nodeToReplace.Parent;
-			}
 		}
 	}
 }
