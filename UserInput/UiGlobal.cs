@@ -32,7 +32,7 @@ namespace LemmeSee.UserInput
 
 		public static Task<string> GetPrompt()
 		{
-			return _dispatcher.Invoke(() => _textBox.GetPrompt());
+			return _dispatcher.Invoke(() => _textBox.GetPromptAsync());
 		}
 	}
 }

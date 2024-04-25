@@ -38,8 +38,7 @@ namespace LemmeSee.RefactoringFlow
 
 				if (nodeToReplace.Parent == null)
 				{
-					if (root.GetType().Name == newNodeType)
-						return root;
+					return root;
 				}
 
 				nodeToReplace = nodeToReplace.Parent;

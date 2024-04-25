@@ -6,7 +6,6 @@ using LemmeSee.UserInput;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
-using Microsoft.CodeAnalysis.Text;
 using Document = Microsoft.CodeAnalysis.Document;
 
 namespace LemmeSee.RefactoringFlow
@@ -15,12 +14,8 @@ namespace LemmeSee.RefactoringFlow
 	internal class AICodeRefactoringProvider : CodeRefactoringProvider
 	{
 		private static string _response;
-		private static string _actionName;
-		private static TextSpan _prevSpan;
-
-		private static string GetActionName() => string.IsNullOrEmpty(_response)
-			? "\u2728 Ask an AI"
-			: "\u2728 Get an AI suggestion";
+		private static bool _processing;
+		private const string ActionName = "\u2728 Ask an AI";
 
 		public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
 		{
@@ -32,72 +27,71 @@ namespace LemmeSee.RefactoringFlow
 			// Find the node at the selection
 			var node = root.FindNode(context.Span);
 
-			if (!string.IsNullOrEmpty(_response) && !_prevSpan.Equals(context.Span))
-			{
-				_response = null;
-				_actionName = GetActionName();
-			}
-			else
-			{
-				_prevSpan = context.Span;
-				_actionName = GetActionName();
-			}
-
-			var action = CodeAction.Create(_actionName,
-					c => ProcessCode(context.
-						Document, node, c));
+			var action = CodeAction.Create(ActionName,
+					c => ProcessPromptAsync(context.Document, root, node, c));
 
 			context.RegisterRefactoring(action);
 		}
 
-		private static async Task<Document> ProcessCode(
+		private static async Task<Document> ProcessPromptAsync(
 			Document document,
+			SyntaxNode root,
 			SyntaxNode node,
 			CancellationToken cancellationToken)
 		{
 			if (node == null)
 				return document;
 
-			if (string.IsNullOrEmpty(_response))
+			var newDocument = document;
+
+			if (!_processing)
 			{
-				await UiGlobal.ShowTextBox();
-
-				var prompt = await UiGlobal.GetPrompt();
-
-				await UiGlobal.HideTextBox();
-
-				// Get the semantic model for the code file
-				var semanticModel =
-					await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-
-				var chat = new PromptProcessor().NewConversation();
-
-				_response = await chat.Process(prompt, node.ToString(), semanticModel);
+				_processing = true;
+				_response = await InitiateUiFlowAsync(document, node, cancellationToken);
+			}
+			else if (!string.IsNullOrEmpty(_response))
+			{
+				newDocument = await ProcessResponseAsync(document, root, node, cancellationToken);
+				_processing = false;
 			}
 
-			//var newNode = await SyntaxFactory.ParseSyntaxTree(response).GetRootAsync(cancellationToken);
+			// Return the document
+			return newDocument;
+		}
 
+		private static async Task<string> InitiateUiFlowAsync(Document document, SyntaxNode node, CancellationToken cancellationToken)
+		{
+			await UiGlobal.ShowTextBox();
+			var prompt = await UiGlobal.GetPrompt();
+
+			await UiGlobal.HideTextBox();
+
+			// Get the semantic model for the code file
+			var semanticModel =
+				await document.GetSemanticModelAsync(cancellationToken)
+					.ConfigureAwait(false);
+
+			var chat = new PromptProcessor().NewConversation();
+
+			return await chat.ProcessAsync(prompt, node.ToString(), semanticModel).ConfigureAwait(false);
+		}
+
+		private static async Task<Document> ProcessResponseAsync(Document document, SyntaxNode root, SyntaxNode node, CancellationToken cancellationToken)
+		{
 			var parsedResponse = SyntaxTreeHelper.TryParseSyntax(_response);
 			if (parsedResponse == null)
 			{
 				return document;
 			}
 
-			// Get the root syntax node
-			var root = await document.GetSyntaxRootAsync(cancellationToken);
-
 			var nodeToReplace = SyntaxTreeHelper.GetNodeToReplace(root, node, parsedResponse);
 
-			//var newRoot = root.ReplaceNode(nodeToReplace, parsedResponse);
-
-			var oldDocAsText = await document.GetTextAsync(cancellationToken);
+			var oldDocAsText = await document.GetTextAsync(cancellationToken)
+				.ConfigureAwait(false);
 
 			// Generate a new document
-			var newDocument = document
-					.WithText(oldDocAsText.Replace(nodeToReplace.Span, parsedResponse.ToString()));
-
-			// Return the document
-			return newDocument;
+			return document
+				.WithText(oldDocAsText.Replace(nodeToReplace.Span, parsedResponse.ToString()));
 		}
 	}
 }

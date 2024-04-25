@@ -181,13 +181,13 @@ namespace LemmeSee.UserInput
 
 		//This method is constantly checking whether the user has entered prompt, without freezing the UI thread.
 		//After the prompt has been formed it is being returned and nullified
-		public async Task<string> GetPrompt()
+		public async Task<string> GetPromptAsync()
 		{
 			var result = string.Empty;
 
 			while (string.IsNullOrEmpty(_prompt))
 			{
-				await DelayedActionOnUiThread(() => result = _prompt);
+				await DelayedActionOnUiThreadAsync(() => result = _prompt);
 			}
 
 			_prompt = null;
@@ -251,7 +251,7 @@ namespace LemmeSee.UserInput
 
 		#endregion
 
-		private static async Task DelayedActionOnUiThread(Action action)
+		private static async Task DelayedActionOnUiThreadAsync(Action action)
 		{
 			await Task.Delay(TimeSpan.FromSeconds(1));
 
