@@ -196,6 +196,12 @@ namespace LemmeSee.UserInput
 			return result;
 		}
 
+		public Task RefactorAsync(Span spanToReplace, string newCode)
+		{
+			_textView.TextBuffer.Replace(spanToReplace, newCode);
+			return Task.CompletedTask;
+		}
+
 		public Task Show()
 		{
 			Hide();

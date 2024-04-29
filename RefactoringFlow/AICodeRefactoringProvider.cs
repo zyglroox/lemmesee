@@ -6,6 +6,7 @@ using LemmeSee.UserInput;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
+using Microsoft.VisualStudio.Text;
 using Document = Microsoft.CodeAnalysis.Document;
 
 namespace LemmeSee.RefactoringFlow
@@ -14,7 +15,6 @@ namespace LemmeSee.RefactoringFlow
 	internal class AICodeRefactoringProvider : CodeRefactoringProvider
 	{
 		private static string _response;
-		private static bool _processing;
 		private const string ActionName = "\u2728 Ask an AI";
 
 		public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
@@ -42,21 +42,11 @@ namespace LemmeSee.RefactoringFlow
 			if (node == null)
 				return document;
 
-			var newDocument = document;
-
-			if (!_processing)
-			{
-				_processing = true;
-				_response = await InitiateUiFlowAsync(document, node, cancellationToken);
-			}
-			else if (!string.IsNullOrEmpty(_response))
-			{
-				newDocument = await ProcessResponseAsync(document, root, node, cancellationToken);
-				_processing = false;
-			}
+			_response = await InitiateUiFlowAsync(document, node, cancellationToken);
+			await ProcessResponseAsync(document, root, node, cancellationToken);
 
 			// Return the document
-			return newDocument;
+			return document;
 		}
 
 		private static async Task<string> InitiateUiFlowAsync(Document document, SyntaxNode node, CancellationToken cancellationToken)
@@ -76,22 +66,14 @@ namespace LemmeSee.RefactoringFlow
 			return await chat.ProcessAsync(prompt, node.ToString(), semanticModel).ConfigureAwait(false);
 		}
 
-		private static async Task<Document> ProcessResponseAsync(Document document, SyntaxNode root, SyntaxNode node, CancellationToken cancellationToken)
+		private static async Task ProcessResponseAsync(Document document, SyntaxNode root, SyntaxNode node, CancellationToken cancellationToken)
 		{
 			var parsedResponse = SyntaxTreeHelper.TryParseSyntax(_response);
-			if (parsedResponse == null)
+			if (parsedResponse != null)
 			{
-				return document;
+				var nodeToReplace = SyntaxTreeHelper.GetNodeToReplace(root, node, parsedResponse);
+				await UiGlobal.Refactor(new Span(nodeToReplace.SpanStart, nodeToReplace.Span.Length), _response);
 			}
-
-			var nodeToReplace = SyntaxTreeHelper.GetNodeToReplace(root, node, parsedResponse);
-
-			var oldDocAsText = await document.GetTextAsync(cancellationToken)
-				.ConfigureAwait(false);
-
-			// Generate a new document
-			return document
-				.WithText(oldDocAsText.Replace(nodeToReplace.Span, parsedResponse.ToString()));
 		}
 	}
 }

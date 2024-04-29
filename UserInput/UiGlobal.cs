@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Microsoft.VisualStudio.Text;
 
 namespace LemmeSee.UserInput
 {
@@ -33,6 +34,11 @@ namespace LemmeSee.UserInput
 		public static Task<string> GetPrompt()
 		{
 			return _dispatcher.Invoke(() => _textBox.GetPromptAsync());
+		}
+
+		public static Task Refactor(Span spanToReplace, string newCode)
+		{
+			return _dispatcher.Invoke(() => _textBox.RefactorAsync(spanToReplace, newCode));
 		}
 	}
 }
