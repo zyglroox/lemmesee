@@ -10,7 +10,7 @@ namespace LemmeSee.RefactoringFlow
 		public static SyntaxNode TryParseSyntax(string code)
 		{
 			// Try to parse the code string into a syntax tree
-			var syntaxTree = CSharpSyntaxTree.ParseText(code);
+			var syntaxTree = CSharpSyntaxTree.ParseText(code, CSharpParseOptions.Default.WithDocumentationMode(DocumentationMode.None));
 
 			// Check if there are any syntax errors in the tree
 			return syntaxTree.GetDiagnostics()
@@ -29,20 +29,17 @@ namespace LemmeSee.RefactoringFlow
 			if (newNodeType == "CompilationUnitSyntax" && newNode.ChildNodes().Any())
 				newNodeType = newNode.ChildNodes().First().GetType().Name;
 
-			while (true)
+			while (nodeToReplace.Parent != null)
 			{
 				if (nodeToReplace.GetType().Name == newNodeType)
 				{
 					return nodeToReplace;
 				}
 
-				if (nodeToReplace.Parent == null)
-				{
-					return root;
-				}
-
 				nodeToReplace = nodeToReplace.Parent;
 			}
+
+			return root;
 		}
 	}
 }

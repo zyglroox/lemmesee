@@ -10,9 +10,6 @@ using Microsoft.VisualStudio.Text.Editor;
 
 namespace LemmeSee.UserInput
 {
-	/// <summary>
-	/// TextAdornment1 places red boxes behind all the "a"s in the editor window
-	/// </summary>
 	internal sealed class AiTextBox
 	{
 		public const string Tag = "AiTextBoxElement";
@@ -204,8 +201,7 @@ namespace LemmeSee.UserInput
 
 		public Task Show()
 		{
-			Hide();
-			if (_currentSelectedSpan.IsEmpty)
+			if (_currentSelectedSpan.IsEmpty || _inputTextControl.IsVisible)
 				return Task.CompletedTask;
 			// Calculate the position to display the input control
 			var bounds = _textView.TextViewLines.GetLineMarkerGeometry(_currentSelectedSpan).Bounds;
@@ -213,7 +209,7 @@ namespace LemmeSee.UserInput
 			var position = isReversed ? bounds.TopLeft : bounds.BottomRight;
 			var caretPosition = _textView.Caret.Position.VirtualSpaces;
 			var offset = _textView.Caret.ContainingTextViewLine.Length - caretPosition;
-			Canvas.SetLeft(_inputControl, position.X + offset * 17);
+			Canvas.SetLeft(_inputControl, position.X + offset * 12);
 			Canvas.SetTop(_inputControl, position.Y);
 			//var position = _textView.TextViewLines.GetMarkerGeometry(_currentSelectedSpan).Bounds.BottomRight;
 			//Canvas.SetLeft(_inputControl, position.X);
@@ -226,6 +222,8 @@ namespace LemmeSee.UserInput
 
 		public Task Hide()
 		{
+			if (!_inputTextControl.IsVisible)
+				return Task.CompletedTask;
 			// Remove the input control from the adornment layer
 			_inputTextControl.Text = string.Empty;
 			_input = null;

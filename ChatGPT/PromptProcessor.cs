@@ -9,7 +9,9 @@ namespace LemmeSee.ChatGPT
 	{
 		private readonly OpenAIAPI _api = new OpenAIAPI("");
 
-		public Conversation NewConversation()
+		public static Conversation StartConversation() => new PromptProcessor().NewConversation();
+
+		private Conversation NewConversation()
 		{
 			var chat = _api.Chat.CreateConversation();
 			chat.RequestParameters.Temperature = 0.1;
